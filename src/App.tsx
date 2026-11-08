@@ -7,11 +7,13 @@ import { CodebaseView } from './components/CodebaseView';
 import { SettingsView } from './components/SettingsView';
 import { StockSearchModal } from './components/StockSearchModal';
 import { FirmRunResult, CustomStockDetails } from './types';
+import { CurrencyCode } from './utils/currency';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'arena' | 'terminal' | 'chart' | 'codebase' | 'settings'>('arena');
-  const [selectedTicker, setSelectedTicker] = useState<string>('NVDA');
-  const [portfolioEquity, setPortfolioEquity] = useState<number>(100000);
+  const [selectedTicker, setSelectedTicker] = useState<string>('RELIANCE');
+  const [currency, setCurrency] = useState<CurrencyCode>('INR');
+  const [portfolioEquity, setPortfolioEquity] = useState<number>(1000000);
   const [riskTolerance, setRiskTolerance] = useState<string>('moderate');
   const [maxPositionSizePct, setMaxPositionSizePct] = useState<number>(10);
   const [activeProvider, setActiveProvider] = useState<string>('gemini');
@@ -21,7 +23,12 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
 
-  const runAnalysis = async (tickerToRun: string = selectedTicker, customDetails?: CustomStockDetails) => {
+  const runAnalysis = async (
+    tickerToRun: string = selectedTicker,
+    customDetails?: CustomStockDetails,
+    currencyToRun: CurrencyCode = currency,
+    exchangeToRun?: string
+  ) => {
     try {
       setIsRunning(true);
       setError(null);
@@ -38,6 +45,8 @@ export default function App() {
           maxPositionSizePct,
           provider: activeProvider,
           customDetails,
+          currency: currencyToRun,
+          exchange: exchangeToRun || customDetails?.exchange,
         }),
       });
 
@@ -59,9 +68,9 @@ export default function App() {
     }
   };
 
-  // Run initial session on mount
+  // Run initial session on mount with Indian equity RELIANCE on NSE
   useEffect(() => {
-    runAnalysis('NVDA');
+    runAnalysis('RELIANCE', undefined, 'INR', 'NSE');
   }, []);
 
   // Keyboard shortcut listener for Cmd+K and /
@@ -83,7 +92,35 @@ export default function App() {
     if (target !== selectedTicker) {
       setSelectedTicker(target);
     }
-    runAnalysis(target);
+    runAnalysis(target, undefined, currency);
+  };
+
+  const handleCurrencyChange = (newCurr: CurrencyCode) => {
+    setCurrency(newCurr);
+    // If portfolio equity is in standard unit, adapt between INR and USD
+    if (newCurr === 'INR' && portfolioEquity === 100000) {
+      setPortfolioEquity(1000000); // 10 Lakhs INR
+    } else if (newCurr === 'USD' && portfolioEquity === 1000000) {
+      setPortfolioEquity(100000); // $100k USD
+    }
+    runAnalysis(selectedTicker, undefined, newCurr);
+  };
+
+  const handleSwitchExchange = (newExchange: 'NSE' | 'BSE') => {
+    let target = selectedTicker;
+    if (newExchange === 'BSE' && selectedTicker === 'RELIANCE') target = '500325';
+    else if (newExchange === 'NSE' && selectedTicker === '500325') target = 'RELIANCE';
+    else if (newExchange === 'BSE' && selectedTicker === 'TCS') target = '532540';
+    else if (newExchange === 'NSE' && selectedTicker === '532540') target = 'TCS';
+    else if (newExchange === 'BSE' && selectedTicker === 'INFY') target = '500209';
+    else if (newExchange === 'NSE' && selectedTicker === '500209') target = 'INFY';
+    else if (newExchange === 'BSE' && selectedTicker === 'HDFCBANK') target = '500180';
+    else if (newExchange === 'NSE' && selectedTicker === '500180') target = 'HDFCBANK';
+    else if (newExchange === 'BSE' && selectedTicker === 'NIFTY50') target = 'SENSEX';
+    else if (newExchange === 'NSE' && selectedTicker === 'SENSEX') target = 'NIFTY50';
+
+    setSelectedTicker(target);
+    runAnalysis(target, undefined, currency, newExchange);
   };
 
   return (
@@ -93,8 +130,11 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         selectedTicker={selectedTicker}
+        exchange={firmData?.exchange || 'NSE'}
+        currency={currency}
+        onToggleCurrency={handleCurrencyChange}
         onOpenSearch={() => setIsSearchOpen(true)}
-        onRunAnalysis={() => runAnalysis(selectedTicker)}
+        onRunAnalysis={() => runAnalysis(selectedTicker, undefined, currency)}
         isRunning={isRunning}
       />
 
@@ -116,11 +156,13 @@ export default function App() {
           <ArenaView
             data={firmData}
             isRunning={isRunning}
+            currency={currency}
             onOpenSearch={() => setIsSearchOpen(true)}
             onSelectQuickTicker={(t) => {
               setSelectedTicker(t);
-              runAnalysis(t);
+              runAnalysis(t, undefined, currency);
             }}
+            onSwitchExchange={handleSwitchExchange}
           />
         )}
         {activeTab === 'terminal' && (
@@ -128,9 +170,10 @@ export default function App() {
             data={firmData}
             onRunCommand={handleTerminalCommand}
             isRunning={isRunning}
+            currency={currency}
           />
         )}
-        {activeTab === 'chart' && <ChartView data={firmData} />}
+        {activeTab === 'chart' && <ChartView data={firmData} currency={currency} />}
         {activeTab === 'codebase' && <CodebaseView />}
         {activeTab === 'settings' && (
           <SettingsView
@@ -142,6 +185,8 @@ export default function App() {
             setMaxPositionSizePct={setMaxPositionSizePct}
             activeProvider={activeProvider}
             setActiveProvider={setActiveProvider}
+            currency={currency}
+            setCurrency={handleCurrencyChange}
           />
         )}
       </main>
@@ -150,9 +195,10 @@ export default function App() {
       <StockSearchModal
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
+        currency={currency}
         onSelectStock={(t, custom) => {
           setSelectedTicker(t);
-          runAnalysis(t, custom);
+          runAnalysis(t, custom, currency);
         }}
         currentTicker={selectedTicker}
       />

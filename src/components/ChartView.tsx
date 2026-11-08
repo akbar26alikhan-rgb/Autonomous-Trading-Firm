@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { FirmRunResult } from '../types';
+import { formatCurrency, CurrencyCode } from '../utils/currency';
 
 interface ChartViewProps {
   data: FirmRunResult | null;
+  currency?: CurrencyCode;
 }
 
-export const ChartView: React.FC<ChartViewProps> = ({ data }) => {
+export const ChartView: React.FC<ChartViewProps> = ({ data, currency = 'INR' }) => {
   const [showSMA, setShowSMA] = useState(true);
   const [showBB, setShowBB] = useState(true);
 
@@ -52,14 +54,14 @@ export const ChartView: React.FC<ChartViewProps> = ({ data }) => {
           <div className="flex items-center gap-2">
             <h3 className="text-base font-bold text-white tracking-tight">{ticker} Daily Candlesticks</h3>
             <span className="text-slate-500">·</span>
-            <span className="text-sm font-mono text-cyan-400 tabular-nums">${currentPrice.toFixed(2)}</span>
+            <span className="text-sm font-mono text-cyan-400 tabular-nums">{formatCurrency(currentPrice, currency)}</span>
             <span className="text-slate-500">·</span>
             <span className={`text-xs font-mono font-semibold ${technicals.trend === 'BULLISH' ? 'text-emerald-400' : 'text-rose-400'}`}>
               {technicals.trend} TREND
             </span>
           </div>
           <span className="text-xs text-slate-400">
-            Support: ${technicals.sma50} · Volatility ATR: ${technicals.atr14} ({technicals.volatilityPct}%)
+            Support: {formatCurrency(technicals.sma50, currency)} · Volatility ATR: {formatCurrency(technicals.atr14, currency)} ({technicals.volatilityPct}%)
           </span>
         </div>
 
@@ -114,7 +116,7 @@ export const ChartView: React.FC<ChartViewProps> = ({ data }) => {
                   fontSize="10"
                   fontFamily="monospace"
                 >
-                  ${p.toFixed(1)}
+                  {formatCurrency(p, currency, { decimals: 1 })}
                 </text>
               </g>
             );
@@ -141,7 +143,7 @@ export const ChartView: React.FC<ChartViewProps> = ({ data }) => {
                 fontFamily="monospace"
                 fontWeight="bold"
               >
-                TP ${tradeProposal.targetPrice.toFixed(1)}
+                TP {formatCurrency(tradeProposal.targetPrice, currency, { decimals: 1 })}
               </text>
 
               {/* Stop Loss line */}
@@ -162,7 +164,7 @@ export const ChartView: React.FC<ChartViewProps> = ({ data }) => {
                 fontFamily="monospace"
                 fontWeight="bold"
               >
-                SL ${tradeProposal.stopLoss.toFixed(1)}
+                SL {formatCurrency(tradeProposal.stopLoss, currency, { decimals: 1 })}
               </text>
             </>
           )}

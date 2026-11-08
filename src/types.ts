@@ -15,6 +15,7 @@ export interface CustomStockDetails {
   grossMargin?: number;
   debtToEquity?: number;
   sector?: string;
+  exchange?: 'NSE' | 'BSE' | 'NASDAQ' | 'NYSE';
   headlines?: string[];
 }
 
@@ -25,6 +26,8 @@ export interface StockSearchResult {
   sector: string;
   pe: number;
   growth: number;
+  exchange?: 'NSE' | 'BSE' | 'NASDAQ' | 'NYSE' | 'GLOBAL';
+  bseCode?: string;
 }
 
 export interface TechnicalData {
@@ -167,5 +170,7 @@ export interface FirmRunResult {
   tradeProposal: TradeProposal;
   riskAudit: RiskAudit;
   engine: string;
+  currency?: 'INR' | 'USD';
+  exchange?: 'NSE' | 'BSE' | 'NASDAQ' | 'NYSE' | 'GLOBAL';
   timestamp: string;
 }

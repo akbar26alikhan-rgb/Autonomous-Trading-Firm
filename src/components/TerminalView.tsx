@@ -1,19 +1,27 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Terminal as TerminalIcon, Play, Trash2, Copy, Check } from 'lucide-react';
 import { FirmRunResult } from '../types';
+import { formatCurrency, CurrencyCode } from '../utils/currency';
 
 interface TerminalViewProps {
   data: FirmRunResult | null;
   onRunCommand: (cmd: string) => void;
   isRunning: boolean;
+  currency?: CurrencyCode;
 }
 
-export const TerminalView: React.FC<TerminalViewProps> = ({ data, onRunCommand, isRunning }) => {
+export const TerminalView: React.FC<TerminalViewProps> = ({
+  data,
+  onRunCommand,
+  isRunning,
+  currency = 'INR',
+}) => {
   const [inputVal, setInputVal] = useState('');
   const [copied, setCopied] = useState(false);
   const [history, setHistory] = useState<string[]>([
     '[*] Autonomous AI Trading Firm Terminal v1.0.0',
     '[*] System ready. Python 3.11 runtime active. Docker environment initialized.',
+    '[*] Valuation currency: ' + (currency === 'INR' ? 'Indian Rupee (₹ INR)' : 'US Dollar ($ USD)'),
     '[*] Type "python main.py --help" or click a preset below to dispatch the committee.',
   ]);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -29,13 +37,13 @@ export const TerminalView: React.FC<TerminalViewProps> = ({ data, onRunCommand, 
         `\n================================================================================`,
         `          AUTONOMOUS AI TRADING FIRM  |  MULTI-AGENT RESEARCH DESK`,
         `================================================================================`,
-        `[*] Target Asset   : ${data.ticker} ($${data.currentPrice.toFixed(2)})`,
+        `[*] Target Asset   : ${data.ticker} (${formatCurrency(data.currentPrice, currency)})`,
         `[*] LLM Engine     : ${data.engine}`,
         `[*] Status         : Execution complete in 2.14s`,
         ``,
         `--- 1. ANALYST TEAM FINDINGS ---`,
-        `  * Fundamental : ${fund.valuationVerdict} (Score: ${fund.healthScore}/100) | Fair: $${fund.fairValueEstimate.toFixed(2)}`,
-        `  * Technical   : ${tech.trendSignal} (RSI: ${data.technicals.rsi14}) | Support: $${tech.supportLevel.toFixed(2)} | Resist: $${tech.resistanceLevel.toFixed(2)}`,
+        `  * Fundamental : ${fund.valuationVerdict} (Score: ${fund.healthScore}/100) | Fair: ${formatCurrency(fund.fairValueEstimate, currency)}`,
+        `  * Technical   : ${tech.trendSignal} (RSI: ${data.technicals.rsi14}) | Support: ${formatCurrency(tech.supportLevel, currency)} | Resist: ${formatCurrency(tech.resistanceLevel, currency)}`,
         `  * News Radar  : ${data.analystReports.news.catalystImpact} (Score: ${data.analystReports.news.score}/100)`,
         `  * Sentiment   : ${data.analystReports.sentiment.crowdSentiment} (Fear & Greed: ${data.newsSentiment.fearGreedIndex})`,
         ``,
@@ -46,23 +54,23 @@ export const TerminalView: React.FC<TerminalViewProps> = ({ data, onRunCommand, 
         ``,
         `--- 3. TRADER EXECUTION PROPOSAL ---`,
         `  * Order Action     : ${trade.action} (${trade.orderType})`,
-        `  * Target Entry     : $${trade.entryPrice.toFixed(2)}`,
-        `  * Take Profit      : $${trade.targetPrice.toFixed(2)}`,
-        `  * Stop Loss        : $${trade.stopLoss.toFixed(2)}`,
+        `  * Target Entry     : ${formatCurrency(trade.entryPrice, currency)}`,
+        `  * Take Profit      : ${formatCurrency(trade.targetPrice, currency)}`,
+        `  * Stop Loss        : ${formatCurrency(trade.stopLoss, currency)}`,
         `  * Risk/Reward      : 1:${trade.riskRewardRatio}`,
         `  * Position Sizing  : ${trade.suggestedSizePct}% of equity`,
         ``,
         `--- 4. CHIEF RISK OFFICER AUDIT ---`,
         `  >>> VERDICT: ${risk.verdict} <<<`,
         `  * Authorized Shares: ${risk.approvedShares.toLocaleString()}`,
-        `  * Max Dollar Risk  : $${risk.maxDollarLoss.toLocaleString()}`,
+        `  * Max Capital Risk : ${formatCurrency(risk.maxDollarLoss, currency)}`,
         `  * Fiduciary Reason : ${risk.fiduciaryReasoning}`,
         `================================================================================\n`,
       ];
 
       setHistory((prev) => [...prev, ...lines]);
     }
-  }, [data]);
+  }, [data, currency]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -87,11 +95,12 @@ export const TerminalView: React.FC<TerminalViewProps> = ({ data, onRunCommand, 
       setHistory((prev) => [
         ...prev,
         'Options:',
-        '  --ticker, -t TEXT      Target ticker symbol (e.g. NVDA, AAPL, TSLA, BTC-USD)',
+        '  --ticker, -t TEXT      Target ticker symbol (e.g. RELIANCE, TCS, INFY, NVDA, TSLA)',
+        '  --currency, -c CHOICE  Valuation currency [INR | USD] (default: INR)',
         '  --provider, -p CHOICE  LLM provider [gemini | openai | anthropic]',
         '  --model, -m TEXT       Model name override (e.g. gemini-3.8-flash)',
         '  --risk, -r CHOICE      Risk tolerance [conservative | moderate | aggressive]',
-        '  --equity, -e FLOAT     Portfolio equity in USD (default: 100000)',
+        '  --equity, -e FLOAT     Portfolio equity in active currency (default: 10,00,000 INR / $100,000 USD)',
         '  --output, -o PATH      Export JSON report to file',
         '  --json                 Print machine-readable JSON to stdout',
       ]);
@@ -102,7 +111,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({ data, onRunCommand, 
         '[+] Container ai_trading_firm started.',
         '[+] Dispatching multi-agent committee...',
       ]);
-      onRunCommand('python main.py --ticker NVDA');
+      onRunCommand('python main.py --ticker RELIANCE');
     } else {
       setHistory((prev) => [
         ...prev,
@@ -118,9 +127,10 @@ export const TerminalView: React.FC<TerminalViewProps> = ({ data, onRunCommand, 
   };
 
   const presets = [
+    'python main.py --ticker RELIANCE',
+    'python main.py --ticker TCS --risk conservative',
+    'python main.py --ticker INFY --equity 1500000',
     'python main.py --ticker NVDA',
-    'python main.py --ticker AAPL --risk conservative',
-    'python main.py --ticker TSLA --equity 250000',
     'docker compose up',
     'python main.py --help',
   ];

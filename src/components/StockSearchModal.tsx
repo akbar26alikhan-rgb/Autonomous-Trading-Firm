@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Search, X, Sliders, ArrowUpRight, PlusCircle, Check } from 'lucide-react';
 import { StockSearchResult, CustomStockDetails } from '../types';
+import { formatCurrency, CurrencyCode } from '../utils/currency';
 
 interface StockSearchModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectStock: (ticker: string, customDetails?: CustomStockDetails) => void;
   currentTicker: string;
+  currency?: CurrencyCode;
 }
 
 export const StockSearchModal: React.FC<StockSearchModalProps> = ({
@@ -14,17 +16,20 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({
   onClose,
   onSelectStock,
   currentTicker,
+  currency = 'INR',
 }) => {
   const [activeTab, setActiveTab] = useState<'search' | 'custom'>('search');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<StockSearchResult[]>([]);
+  const [selectedExchange, setSelectedExchange] = useState<'ALL' | 'NSE' | 'BSE' | 'GLOBAL'>('ALL');
   const [selectedSector, setSelectedSector] = useState<string>('ALL');
 
   // Custom Stock Details Form State
   const [customTicker, setCustomTicker] = useState('');
   const [customName, setCustomName] = useState('');
-  const [customPrice, setCustomPrice] = useState<string>('125.00');
-  const [customSector, setCustomSector] = useState('Technology & Cloud');
+  const [customExchange, setCustomExchange] = useState<'NSE' | 'BSE' | 'NASDAQ' | 'NYSE'>('NSE');
+  const [customPrice, setCustomPrice] = useState<string>(currency === 'INR' ? '1250.00' : '125.00');
+  const [customSector, setCustomSector] = useState('Technology & Telecom');
   const [customPE, setCustomPE] = useState<string>('32.5');
   const [customGrowth, setCustomGrowth] = useState<string>('24.0');
   const [customMargin, setCustomMargin] = useState<string>('68.0');
@@ -38,7 +43,7 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({
     if (!isOpen) return;
 
     const timer = setTimeout(() => {
-      fetch(`/api/search-stocks?q=${encodeURIComponent(query)}`)
+      fetch(`/api/search-stocks?q=${encodeURIComponent(query)}&currency=${currency}&exchange=${selectedExchange}`)
         .then((res) => res.json())
         .then((data) => {
           if (data.success && data.results) {
@@ -49,7 +54,7 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({
     }, 150);
 
     return () => clearTimeout(timer);
-  }, [query, isOpen]);
+  }, [query, isOpen, currency, selectedExchange]);
 
   if (!isOpen) return null;
 
@@ -64,6 +69,7 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({
       grossMargin: parseFloat(customMargin) || 60.0,
       debtToEquity: parseFloat(customDebt) || 20.0,
       sector: customSector,
+      exchange: customExchange,
       headlines: customHeadlines
         .split('\n')
         .map((h) => h.trim())
@@ -146,17 +152,49 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({
               )}
             </div>
 
+            {/* Exchange Filter Selector */}
+            <div>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-1">
+                Select Exchange:
+              </span>
+              <div className="grid grid-cols-4 gap-1.5 text-xs font-mono">
+                {[
+                  { id: 'ALL', label: 'All Exchanges' },
+                  { id: 'NSE', label: '🇮🇳 NSE India' },
+                  { id: 'BSE', label: '🇮🇳 BSE Mumbai' },
+                  { id: 'GLOBAL', label: '🌐 Global / US' },
+                ].map((ex) => (
+                  <button
+                    key={ex.id}
+                    type="button"
+                    onClick={() => setSelectedExchange(ex.id as any)}
+                    className={`py-1.5 px-2 rounded-lg text-center font-medium border transition-colors text-[11px] ${
+                      selectedExchange === ex.id
+                        ? ex.id === 'BSE'
+                          ? 'bg-amber-950 text-amber-300 border-amber-800 font-bold'
+                          : ex.id === 'NSE'
+                          ? 'bg-emerald-950 text-emerald-300 border-emerald-800 font-bold'
+                          : 'bg-cyan-950 text-cyan-300 border-cyan-800 font-bold'
+                        : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+                    }`}
+                  >
+                    {ex.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Quick Sector Filters */}
             <div className="flex flex-wrap gap-1.5 text-xs font-mono">
               {[
-                { id: 'ALL', label: 'All' },
-                { id: 'TECH', label: 'Tech & AI' },
+                { id: 'ALL', label: 'All Sectors' },
+                { id: 'TECH', label: 'Tech & IT' },
+                { id: 'FINANCIAL', label: 'Banking & NBFC' },
+                { id: 'ENERGY', label: 'Energy & Power' },
+                { id: 'AUTOMOTIVE', label: 'Auto & EV' },
                 { id: 'SEMICONDUCTOR', label: 'Semis' },
-                { id: 'CRYPTO', label: 'Crypto' },
-                { id: 'HEALTHCARE', label: 'Healthcare' },
-                { id: 'FINANCIAL', label: 'Finance' },
-                { id: 'RETAIL', label: 'Retail' },
-                { id: 'ETF', label: 'Indices' },
+                { id: 'FMCG', label: 'FMCG' },
+                { id: 'INDEX', label: 'Indices (Nifty/Sensex)' },
               ].map((s) => (
                 <button
                   key={s.id}
@@ -178,7 +216,7 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({
                 <div>
                   <span className="text-xs text-slate-400">Can&apos;t find this symbol in suggestions?</span>
                   <div className="text-xs font-mono font-semibold text-white">
-                    Analyze <strong className="text-cyan-400">{query.toUpperCase().trim()}</strong> directly
+                    Analyze <strong className="text-cyan-400">{query.toUpperCase().trim()}</strong> directly on {selectedExchange !== 'ALL' ? selectedExchange : 'NSE/BSE'}
                   </div>
                 </div>
                 <button
@@ -202,9 +240,12 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({
 
               {filteredResults.map((item) => {
                 const isSelected = item.ticker === currentTicker;
+                const isBse = item.exchange === 'BSE';
+                const isNse = item.exchange === 'NSE';
+
                 return (
                   <button
-                    key={item.ticker}
+                    key={`${item.exchange || 'EX'}-${item.ticker}`}
                     onClick={() => {
                       onSelectStock(item.ticker);
                       onClose();
@@ -220,12 +261,27 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({
                         {item.ticker.slice(0, 4)}
                       </div>
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-mono font-bold text-sm text-white group-hover:text-cyan-300 transition-colors">
                             {item.ticker}
                           </span>
+                          {/* Exchange badge */}
+                          <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-semibold border ${
+                            isBse
+                              ? 'bg-amber-950/80 text-amber-300 border-amber-800'
+                              : isNse
+                              ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
+                              : 'bg-blue-950/80 text-blue-300 border-blue-800'
+                          }`}>
+                            {item.exchange || 'NSE'}
+                          </span>
+                          {item.bseCode && (
+                            <span className="text-[10px] font-mono text-slate-500">
+                              Scrip: {item.bseCode}
+                            </span>
+                          )}
                           <span className="text-slate-500 text-xs">·</span>
-                          <span className="text-xs text-slate-300 truncate max-w-[240px]">
+                          <span className="text-xs text-slate-300 truncate max-w-[200px]">
                             {item.name}
                           </span>
                         </div>
@@ -235,9 +291,9 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({
                       </div>
                     </div>
 
-                    <div className="text-right">
+                    <div className="text-right shrink-0">
                       <div className="font-mono text-sm font-semibold text-white tabular-nums">
-                        ${item.price.toFixed(2)}
+                        {formatCurrency(item.price, currency)}
                       </div>
                       <div className="text-[10px] text-slate-400 font-mono">
                         P/E: <span className="text-slate-200 tabular-nums">{item.pe || 'N/A'}</span> · Rev: <span className="text-emerald-400 tabular-nums">+{item.growth}%</span>
@@ -254,7 +310,7 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({
         {activeTab === 'custom' && (
           <form onSubmit={handleCustomSubmit} className="p-6 flex-1 overflow-y-auto space-y-4">
             <div className="p-3 bg-cyan-950/30 border border-cyan-900/40 rounded-xl text-xs text-cyan-200 leading-relaxed">
-              Enter custom financial parameters for any public stock, private startup, or hypothetical scenario. The Fundamental, Technical, News, and Risk agents will evaluate your exact inputs.
+              Enter custom financial parameters for any Indian or global equity, startup, or market scenario. The Fundamental, Technical, News, and Risk agents will evaluate your exact inputs.
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -265,7 +321,7 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({
                 <input
                   type="text"
                   required
-                  placeholder="e.g. PLTR, LLY, INFY, STARTUP"
+                  placeholder="e.g. RELIANCE, TCS, INFY, HDFCBANK, PLTR"
                   value={customTicker}
                   onChange={(e) => setCustomTicker(e.target.value.toUpperCase())}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-cyan-500 uppercase"
@@ -274,11 +330,27 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({
 
               <div>
                 <label className="text-xs font-mono text-slate-300 block mb-1">
+                  Exchange Listing *
+                </label>
+                <select
+                  value={customExchange}
+                  onChange={(e) => setCustomExchange(e.target.value as any)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-cyan-500"
+                >
+                  <option value="NSE">NSE (National Stock Exchange of India)</option>
+                  <option value="BSE">BSE (Bombay Stock Exchange)</option>
+                  <option value="NASDAQ">NASDAQ (US)</option>
+                  <option value="NYSE">NYSE (New York Stock Exchange)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-mono text-slate-300 block mb-1">
                   Company Name
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Palantir Technologies Inc."
+                  placeholder="e.g. Reliance Industries Limited"
                   value={customName}
                   onChange={(e) => setCustomName(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
@@ -287,7 +359,7 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({
 
               <div>
                 <label className="text-xs font-mono text-slate-300 block mb-1">
-                  Share Price (USD) *
+                  Share Price ({currency === 'INR' ? '₹ INR' : '$ USD'}) *
                 </label>
                 <input
                   type="number"

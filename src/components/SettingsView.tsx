@@ -1,5 +1,6 @@
 import React from 'react';
-import { ShieldCheck, Cpu, Database, Container } from 'lucide-react';
+import { ShieldCheck, Cpu, Database, Container, IndianRupee, DollarSign } from 'lucide-react';
+import { CurrencyCode } from '../utils/currency';
 
 interface SettingsViewProps {
   portfolioEquity: number;
@@ -10,6 +11,8 @@ interface SettingsViewProps {
   setMaxPositionSizePct: (val: number) => void;
   activeProvider: string;
   setActiveProvider: (val: string) => void;
+  currency?: CurrencyCode;
+  setCurrency?: (val: CurrencyCode) => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -21,6 +24,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   setMaxPositionSizePct,
   activeProvider,
   setActiveProvider,
+  currency = 'INR',
+  setCurrency,
 }) => {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -28,7 +33,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       <div>
         <h3 className="text-base font-bold text-white tracking-tight">Trading Firm Risk Mandates & LLM Configuration</h3>
         <p className="text-xs text-slate-400 mt-1">
-          Adjust the institutional guardrails enforced by the Chief Risk Officer and select provider engines for autonomous agent reasoning.
+          Adjust the institutional guardrails enforced by the Chief Risk Officer, select currency denomination, and configure provider engines.
         </p>
       </div>
 
@@ -40,21 +45,60 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <h4 className="text-sm font-semibold text-white">Chief Risk Officer Mandates</h4>
           </div>
 
+          {/* Currency Denomination */}
+          {setCurrency && (
+            <div>
+              <label className="text-xs font-mono text-slate-300 block mb-1.5">
+                Valuation Currency Denomination
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrency('INR')}
+                  className={`py-2 px-3 rounded-lg text-xs font-mono font-medium border flex items-center justify-center gap-2 transition-all ${
+                    currency === 'INR'
+                      ? 'bg-cyan-950 text-cyan-300 border-cyan-800 font-bold'
+                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+                  }`}
+                >
+                  <IndianRupee className="w-3.5 h-3.5" />
+                  <span>Indian Rupee (₹ INR)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrency('USD')}
+                  className={`py-2 px-3 rounded-lg text-xs font-mono font-medium border flex items-center justify-center gap-2 transition-all ${
+                    currency === 'USD'
+                      ? 'bg-cyan-950 text-cyan-300 border-cyan-800 font-bold'
+                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+                  }`}
+                >
+                  <DollarSign className="w-3.5 h-3.5" />
+                  <span>US Dollar ($ USD)</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="text-xs font-mono text-slate-300 block mb-1.5">
-              Portfolio Total Equity (USD)
+              Portfolio Total Equity ({currency === 'INR' ? '₹ INR' : '$ USD'})
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-2 text-xs font-mono text-slate-500">$</span>
+              <span className="absolute left-3 top-2 text-xs font-mono text-slate-500 font-bold">
+                {currency === 'INR' ? '₹' : '$'}
+              </span>
               <input
                 type="number"
                 value={portfolioEquity}
                 onChange={(e) => setPortfolioEquity(Math.max(1000, Number(e.target.value)))}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-7 pr-3 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-cyan-500"
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-cyan-500"
               />
             </div>
             <span className="text-[11px] text-slate-500 mt-1 block">
-              Used for exact dollar position sizing and Value-at-Risk limits.
+              {currency === 'INR'
+                ? 'Used for exact Rupee position sizing and VaR limits (default ₹10,00,000 = 10 Lakhs INR).'
+                : 'Used for exact Dollar position sizing and Value-at-Risk limits (default $100,000 USD).'}
             </span>
           </div>
 

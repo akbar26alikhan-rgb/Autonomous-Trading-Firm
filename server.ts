@@ -32,43 +32,136 @@ if (process.env.GEMINI_API_KEY) {
 
 // Technical indicator calculations (in TS for backend execution)
 // Technical indicator calculations (in TS for backend execution)
-const knownStocks: Record<string, { name: string; price: number; pe: number; growth: number; sector: string; debtEq: number; headlines?: string[] }> = {
-  NVDA: { name: 'NVIDIA Corporation', price: 138.25, pe: 48.2, growth: 82.5, sector: 'Semiconductors', debtEq: 21.4 },
-  AAPL: { name: 'Apple Inc.', price: 234.50, pe: 33.1, growth: 6.8, sector: 'Consumer Electronics', debtEq: 145.0 },
-  MSFT: { name: 'Microsoft Corporation', price: 422.80, pe: 34.6, growth: 15.2, sector: 'Cloud & AI Software', debtEq: 38.5 },
-  TSLA: { name: 'Tesla, Inc.', price: 288.90, pe: 68.4, growth: 9.2, sector: 'EV & Autonomous Systems', debtEq: 12.0 },
-  GOOGL: { name: 'Alphabet Inc.', price: 178.40, pe: 22.8, growth: 14.5, sector: 'Search & Cloud AI', debtEq: 10.2 },
-  AMZN: { name: 'Amazon.com, Inc.', price: 204.10, pe: 41.5, growth: 12.8, sector: 'E-Commerce & Cloud', debtEq: 52.0 },
-  META: { name: 'Meta Platforms, Inc.', price: 588.20, pe: 28.4, growth: 18.9, sector: 'Social Media & AI', debtEq: 18.0 },
-  PLTR: { name: 'Palantir Technologies', price: 62.40, pe: 88.5, growth: 30.2, sector: 'Enterprise AI & Defense', debtEq: 0.0 },
-  AMD: { name: 'Advanced Micro Devices', price: 142.60, pe: 42.0, growth: 28.0, sector: 'Semiconductors', debtEq: 15.0 },
-  AVGO: { name: 'Broadcom Inc.', price: 172.50, pe: 36.2, growth: 44.0, sector: 'Semiconductors & Networking', debtEq: 92.0 },
-  TSM: { name: 'Taiwan Semiconductor', price: 194.80, pe: 24.5, growth: 36.0, sector: 'Semiconductor Foundry', debtEq: 22.0 },
-  ASML: { name: 'ASML Holding N.V.', price: 712.00, pe: 38.1, growth: 18.5, sector: 'Lithography Equipment', debtEq: 25.0 },
-  COIN: { name: 'Coinbase Global, Inc.', price: 295.40, pe: 44.0, growth: 78.0, sector: 'Crypto Exchange & Fintech', debtEq: 45.0 },
-  NFLX: { name: 'Netflix, Inc.', price: 825.00, pe: 41.2, growth: 15.8, sector: 'Streaming Media', debtEq: 65.0 },
-  CRM: { name: 'Salesforce, Inc.', price: 328.00, pe: 45.0, growth: 11.2, sector: 'Enterprise Cloud CRM', debtEq: 20.0 },
-  ORCL: { name: 'Oracle Corporation', price: 188.50, pe: 40.8, growth: 14.0, sector: 'Cloud Infrastructure', debtEq: 180.0 },
-  LLY: { name: 'Eli Lilly and Company', price: 842.00, pe: 54.0, growth: 32.0, sector: 'Pharmaceuticals & GLP-1', debtEq: 80.0 },
-  NVO: { name: 'Novo Nordisk A/S', price: 112.50, pe: 32.0, growth: 24.0, sector: 'Healthcare & Therapeutics', debtEq: 15.0 },
-  JPM: { name: 'JPMorgan Chase & Co.', price: 244.20, pe: 12.8, growth: 9.5, sector: 'Investment Banking', debtEq: 160.0 },
-  V: { name: 'Visa Inc.', price: 310.50, pe: 31.0, growth: 10.2, sector: 'Payment Networks', debtEq: 45.0 },
-  COST: { name: 'Costco Wholesale Corp.', price: 955.00, pe: 52.0, growth: 8.5, sector: 'Discount Wholesale Retail', debtEq: 18.0 },
-  WMT: { name: 'Walmart Inc.', price: 88.40, pe: 34.0, growth: 6.2, sector: 'Consumer Retail', debtEq: 70.0 },
-  SPY: { name: 'SPDR S&P 500 ETF Trust', price: 592.30, pe: 26.5, growth: 8.0, sector: 'Broad Market ETF', debtEq: 0 },
-  QQQ: { name: 'Invesco QQQ Trust', price: 512.40, pe: 30.2, growth: 14.0, sector: 'Nasdaq-100 Tech ETF', debtEq: 0 },
-  'BTC-USD': { name: 'Bitcoin USD', price: 89450.00, pe: 0, growth: 110.0, sector: 'Digital Assets & Store of Value', debtEq: 0 },
-  'ETH-USD': { name: 'Ethereum USD', price: 3180.00, pe: 0, growth: 75.0, sector: 'Smart Contract Platform', debtEq: 0 },
-  'SOL-USD': { name: 'Solana USD', price: 215.50, pe: 0, growth: 140.0, sector: 'High-Throughput L1 Blockchain', debtEq: 0 },
+const USD_TO_INR = 86.50;
+
+interface StockDefinition {
+  name: string;
+  price: number;
+  pe: number;
+  growth: number;
+  sector: string;
+  debtEq: number;
+  isINR?: boolean;
+  exchange: 'NSE' | 'BSE' | 'NASDAQ' | 'NYSE' | 'GLOBAL';
+  bseCode?: string;
+  nseCode?: string;
+  headlines?: string[];
+}
+
+const knownStocks: Record<string, StockDefinition> = {
+  // --- National Stock Exchange of India (NSE) ---
+  RELIANCE: { name: 'Reliance Industries Ltd.', price: 1274.50, pe: 24.5, growth: 12.8, sector: 'Energy & Telecom', debtEq: 38.0, isINR: true, exchange: 'NSE', bseCode: '500325', nseCode: 'RELIANCE' },
+  'RELIANCE.NS': { name: 'Reliance Industries Ltd.', price: 1274.50, pe: 24.5, growth: 12.8, sector: 'Energy & Telecom', debtEq: 38.0, isINR: true, exchange: 'NSE', bseCode: '500325', nseCode: 'RELIANCE' },
+  TCS: { name: 'Tata Consultancy Services', price: 4150.00, pe: 29.8, growth: 8.5, sector: 'IT Services & Consulting', debtEq: 9.0, isINR: true, exchange: 'NSE', bseCode: '532540', nseCode: 'TCS' },
+  'TCS.NS': { name: 'Tata Consultancy Services', price: 4150.00, pe: 29.8, growth: 8.5, sector: 'IT Services & Consulting', debtEq: 9.0, isINR: true, exchange: 'NSE', bseCode: '532540', nseCode: 'TCS' },
+  INFY: { name: 'Infosys Limited', price: 1865.00, pe: 27.2, growth: 9.4, sector: 'Enterprise Digital Services', debtEq: 11.0, isINR: true, exchange: 'NSE', bseCode: '500209', nseCode: 'INFY' },
+  'INFY.NS': { name: 'Infosys Limited', price: 1865.00, pe: 27.2, growth: 9.4, sector: 'Enterprise Digital Services', debtEq: 11.0, isINR: true, exchange: 'NSE', bseCode: '500209', nseCode: 'INFY' },
+  HDFCBANK: { name: 'HDFC Bank Limited', price: 1745.00, pe: 18.5, growth: 14.2, sector: 'Banking & Financials', debtEq: 120.0, isINR: true, exchange: 'NSE', bseCode: '500180', nseCode: 'HDFCBANK' },
+  'HDFCBANK.NS': { name: 'HDFC Bank Limited', price: 1745.00, pe: 18.5, growth: 14.2, sector: 'Banking & Financials', debtEq: 120.0, isINR: true, exchange: 'NSE', bseCode: '500180', nseCode: 'HDFCBANK' },
+  TATAMOTORS: { name: 'Tata Motors Limited', price: 825.00, pe: 10.4, growth: 22.0, sector: 'Automotive & EV', debtEq: 45.0, isINR: true, exchange: 'NSE', bseCode: '500570', nseCode: 'TATAMOTORS' },
+  'TATAMOTORS.NS': { name: 'Tata Motors Limited', price: 825.00, pe: 10.4, growth: 22.0, sector: 'Automotive & EV', debtEq: 45.0, isINR: true, exchange: 'NSE', bseCode: '500570', nseCode: 'TATAMOTORS' },
+  ICICIBANK: { name: 'ICICI Bank Limited', price: 1268.00, pe: 17.6, growth: 16.5, sector: 'Private Sector Banking', debtEq: 95.0, isINR: true, exchange: 'NSE', bseCode: '532174', nseCode: 'ICICIBANK' },
+  SBIN: { name: 'State Bank of India', price: 815.00, pe: 9.8, growth: 11.0, sector: 'Public Sector Banking', debtEq: 110.0, isINR: true, exchange: 'NSE', bseCode: '500112', nseCode: 'SBIN' },
+  BHARTIARTL: { name: 'Bharti Airtel Limited', price: 1610.00, pe: 54.0, growth: 18.0, sector: 'Telecommunications & 5G', debtEq: 85.0, isINR: true, exchange: 'NSE', bseCode: '532454', nseCode: 'BHARTIARTL' },
+  ITC: { name: 'ITC Limited', price: 478.00, pe: 26.5, growth: 7.5, sector: 'FMCG & Agri-Business', debtEq: 0.0, isINR: true, exchange: 'NSE', bseCode: '500875', nseCode: 'ITC' },
+  LT: { name: 'Larsen & Toubro Ltd.', price: 3620.00, pe: 34.0, growth: 15.0, sector: 'Infrastructure & Defense', debtEq: 65.0, isINR: true, exchange: 'NSE', bseCode: '500510', nseCode: 'LT' },
+  BAJFINANCE: { name: 'Bajaj Finance Limited', price: 6890.00, pe: 28.5, growth: 24.0, sector: 'Consumer Lending & NBFC', debtEq: 210.0, isINR: true, exchange: 'NSE', bseCode: '500034', nseCode: 'BAJFINANCE' },
+  MARUTI: { name: 'Maruti Suzuki India', price: 11450.00, pe: 24.0, growth: 13.5, sector: 'Passenger Vehicles', debtEq: 2.0, isINR: true, exchange: 'NSE', bseCode: '532500', nseCode: 'MARUTI' },
+  HINDUNILVR: { name: 'Hindustan Unilever Ltd.', price: 2380.00, pe: 52.0, growth: 6.5, sector: 'Consumer Staples & FMCG', debtEq: 0.0, isINR: true, exchange: 'NSE', bseCode: '500696', nseCode: 'HINDUNILVR' },
+  WIPRO: { name: 'Wipro Limited', price: 545.00, pe: 21.0, growth: 5.8, sector: 'Global IT & AI Services', debtEq: 14.0, isINR: true, exchange: 'NSE', bseCode: '507685', nseCode: 'WIPRO' },
+  NIFTY50: { name: 'Nifty 50 Benchmark', price: 24180.00, pe: 22.4, growth: 12.0, sector: 'NSE Benchmark Index', debtEq: 0.0, isINR: true, exchange: 'NSE' },
+  BANKNIFTY: { name: 'Nifty Bank Index', price: 51850.00, pe: 16.8, growth: 14.5, sector: 'NSE Banking Sector Index', debtEq: 0.0, isINR: true, exchange: 'NSE' },
+
+  // --- Bombay Stock Exchange (BSE) ---
+  SENSEX: { name: 'BSE S&P Sensex 30 Index', price: 79640.00, pe: 23.1, growth: 11.5, sector: 'BSE Benchmark Index', debtEq: 0.0, isINR: true, exchange: 'BSE', bseCode: '1' },
+  BSE100: { name: 'BSE 100 Index', price: 25420.00, pe: 22.8, growth: 12.2, sector: 'BSE Broad Market Index', debtEq: 0.0, isINR: true, exchange: 'BSE' },
+  '500325': { name: 'Reliance Industries (BSE)', price: 1274.80, pe: 24.5, growth: 12.8, sector: 'Energy & Telecom (BSE)', debtEq: 38.0, isINR: true, exchange: 'BSE', bseCode: '500325', nseCode: 'RELIANCE' },
+  'RELIANCE.BO': { name: 'Reliance Industries (BSE)', price: 1274.80, pe: 24.5, growth: 12.8, sector: 'Energy & Telecom (BSE)', debtEq: 38.0, isINR: true, exchange: 'BSE', bseCode: '500325', nseCode: 'RELIANCE' },
+  '532540': { name: 'Tata Consultancy Services (BSE)', price: 4151.20, pe: 29.8, growth: 8.5, sector: 'IT Services & Consulting (BSE)', debtEq: 9.0, isINR: true, exchange: 'BSE', bseCode: '532540', nseCode: 'TCS' },
+  'TCS.BO': { name: 'Tata Consultancy Services (BSE)', price: 4151.20, pe: 29.8, growth: 8.5, sector: 'IT Services & Consulting (BSE)', debtEq: 9.0, isINR: true, exchange: 'BSE', bseCode: '532540', nseCode: 'TCS' },
+  '500209': { name: 'Infosys Limited (BSE)', price: 1865.50, pe: 27.2, growth: 9.4, sector: 'Enterprise Digital Services (BSE)', debtEq: 11.0, isINR: true, exchange: 'BSE', bseCode: '500209', nseCode: 'INFY' },
+  'INFY.BO': { name: 'Infosys Limited (BSE)', price: 1865.50, pe: 27.2, growth: 9.4, sector: 'Enterprise Digital Services (BSE)', debtEq: 11.0, isINR: true, exchange: 'BSE', bseCode: '500209', nseCode: 'INFY' },
+  '500180': { name: 'HDFC Bank Limited (BSE)', price: 1745.30, pe: 18.5, growth: 14.2, sector: 'Banking & Financials (BSE)', debtEq: 120.0, isINR: true, exchange: 'BSE', bseCode: '500180', nseCode: 'HDFCBANK' },
+  'HDFCBANK.BO': { name: 'HDFC Bank Limited (BSE)', price: 1745.30, pe: 18.5, growth: 14.2, sector: 'Banking & Financials (BSE)', debtEq: 120.0, isINR: true, exchange: 'BSE', bseCode: '500180', nseCode: 'HDFCBANK' },
+  '500570': { name: 'Tata Motors Limited (BSE)', price: 825.25, pe: 10.4, growth: 22.0, sector: 'Automotive & EV (BSE)', debtEq: 45.0, isINR: true, exchange: 'BSE', bseCode: '500570', nseCode: 'TATAMOTORS' },
+  'TATAMOTORS.BO': { name: 'Tata Motors Limited (BSE)', price: 825.25, pe: 10.4, growth: 22.0, sector: 'Automotive & EV (BSE)', debtEq: 45.0, isINR: true, exchange: 'BSE', bseCode: '500570', nseCode: 'TATAMOTORS' },
+  '532174': { name: 'ICICI Bank Limited (BSE)', price: 1268.40, pe: 17.6, growth: 16.5, sector: 'Banking (BSE)', debtEq: 95.0, isINR: true, exchange: 'BSE', bseCode: '532174', nseCode: 'ICICIBANK' },
+  '500112': { name: 'State Bank of India (BSE)', price: 815.30, pe: 9.8, growth: 11.0, sector: 'Public Sector Banking (BSE)', debtEq: 110.0, isINR: true, exchange: 'BSE', bseCode: '500112', nseCode: 'SBIN' },
+  '532454': { name: 'Bharti Airtel Limited (BSE)', price: 1610.50, pe: 54.0, growth: 18.0, sector: 'Telecom (BSE)', debtEq: 85.0, isINR: true, exchange: 'BSE', bseCode: '532454', nseCode: 'BHARTIARTL' },
+  '500875': { name: 'ITC Limited (BSE)', price: 478.15, pe: 26.5, growth: 7.5, sector: 'FMCG (BSE)', debtEq: 0.0, isINR: true, exchange: 'BSE', bseCode: '500875', nseCode: 'ITC' },
+  '500510': { name: 'Larsen & Toubro Ltd. (BSE)', price: 3620.80, pe: 34.0, growth: 15.0, sector: 'Infrastructure (BSE)', debtEq: 65.0, isINR: true, exchange: 'BSE', bseCode: '500510', nseCode: 'LT' },
+  '500034': { name: 'Bajaj Finance Limited (BSE)', price: 6891.00, pe: 28.5, growth: 24.0, sector: 'NBFC (BSE)', debtEq: 210.0, isINR: true, exchange: 'BSE', bseCode: '500034', nseCode: 'BAJFINANCE' },
+  '532500': { name: 'Maruti Suzuki India (BSE)', price: 11452.00, pe: 24.0, growth: 13.5, sector: 'Automobiles (BSE)', debtEq: 2.0, isINR: true, exchange: 'BSE', bseCode: '532500', nseCode: 'MARUTI' },
+  '500696': { name: 'Hindustan Unilever (BSE)', price: 2380.50, pe: 52.0, growth: 6.5, sector: 'FMCG (BSE)', debtEq: 0.0, isINR: true, exchange: 'BSE', bseCode: '500696', nseCode: 'HINDUNILVR' },
+  '507685': { name: 'Wipro Limited (BSE)', price: 545.20, pe: 21.0, growth: 5.8, sector: 'IT Services (BSE)', debtEq: 14.0, isINR: true, exchange: 'BSE', bseCode: '507685', nseCode: 'WIPRO' },
+
+  // --- Global Equities & Tech Leaders ---
+  NVDA: { name: 'NVIDIA Corporation', price: 138.25, pe: 48.2, growth: 82.5, sector: 'Semiconductors & AI Hardware', debtEq: 21.4, exchange: 'NASDAQ' },
+  AAPL: { name: 'Apple Inc.', price: 234.50, pe: 33.1, growth: 6.8, sector: 'Consumer Electronics', debtEq: 145.0, exchange: 'NASDAQ' },
+  MSFT: { name: 'Microsoft Corporation', price: 422.80, pe: 34.6, growth: 15.2, sector: 'Cloud & Enterprise AI', debtEq: 38.5, exchange: 'NASDAQ' },
+  TSLA: { name: 'Tesla, Inc.', price: 288.90, pe: 68.4, growth: 9.2, sector: 'EV & Autonomous Systems', debtEq: 12.0, exchange: 'NASDAQ' },
+  GOOGL: { name: 'Alphabet Inc.', price: 178.40, pe: 22.8, growth: 14.5, sector: 'Search & Cloud AI', debtEq: 10.2, exchange: 'NASDAQ' },
+  AMZN: { name: 'Amazon.com, Inc.', price: 204.10, pe: 41.5, growth: 12.8, sector: 'E-Commerce & AWS', debtEq: 52.0, exchange: 'NASDAQ' },
+  META: { name: 'Meta Platforms, Inc.', price: 588.20, pe: 28.4, growth: 18.9, sector: 'Social Media & Open AI', debtEq: 18.0, exchange: 'NASDAQ' },
+  PLTR: { name: 'Palantir Technologies', price: 62.40, pe: 88.5, growth: 30.2, sector: 'Enterprise AI & Defense', debtEq: 0.0, exchange: 'NYSE' },
+  AMD: { name: 'Advanced Micro Devices', price: 142.60, pe: 42.0, growth: 28.0, sector: 'Semiconductors', debtEq: 15.0, exchange: 'NASDAQ' },
+  AVGO: { name: 'Broadcom Inc.', price: 172.50, pe: 36.2, growth: 44.0, sector: 'Semiconductors & Networking', debtEq: 92.0, exchange: 'NASDAQ' },
+  TSM: { name: 'Taiwan Semiconductor', price: 194.80, pe: 24.5, growth: 36.0, sector: 'Semiconductor Foundry', debtEq: 22.0, exchange: 'NYSE' },
+  ASML: { name: 'ASML Holding N.V.', price: 712.00, pe: 38.1, growth: 18.5, sector: 'Lithography Equipment', debtEq: 25.0, exchange: 'NASDAQ' },
+  COIN: { name: 'Coinbase Global, Inc.', price: 295.40, pe: 44.0, growth: 78.0, sector: 'Crypto Infrastructure & Fintech', debtEq: 45.0, exchange: 'NASDAQ' },
+  NFLX: { name: 'Netflix, Inc.', price: 825.00, pe: 41.2, growth: 15.8, sector: 'Streaming Media', debtEq: 65.0, exchange: 'NASDAQ' },
+  CRM: { name: 'Salesforce, Inc.', price: 328.00, pe: 45.0, growth: 11.2, sector: 'Enterprise Cloud CRM', debtEq: 20.0, exchange: 'NYSE' },
+  ORCL: { name: 'Oracle Corporation', price: 188.50, pe: 40.8, growth: 14.0, sector: 'Cloud Infrastructure', debtEq: 180.0, exchange: 'NYSE' },
+  LLY: { name: 'Eli Lilly and Company', price: 842.00, pe: 54.0, growth: 32.0, sector: 'Pharmaceuticals & GLP-1', debtEq: 80.0, exchange: 'NYSE' },
+  NVO: { name: 'Novo Nordisk A/S', price: 112.50, pe: 32.0, growth: 24.0, sector: 'Healthcare & Therapeutics', debtEq: 15.0, exchange: 'NYSE' },
+  JPM: { name: 'JPMorgan Chase & Co.', price: 244.20, pe: 12.8, growth: 9.5, sector: 'Investment Banking', debtEq: 160.0, exchange: 'NYSE' },
+  V: { name: 'Visa Inc.', price: 310.50, pe: 31.0, growth: 10.2, sector: 'Payment Networks', debtEq: 45.0, exchange: 'NYSE' },
+  COST: { name: 'Costco Wholesale Corp.', price: 955.00, pe: 52.0, growth: 8.5, sector: 'Discount Wholesale Retail', debtEq: 18.0, exchange: 'NASDAQ' },
+  WMT: { name: 'Walmart Inc.', price: 88.40, pe: 34.0, growth: 6.2, sector: 'Consumer Retail', debtEq: 70.0, exchange: 'NYSE' },
+  SPY: { name: 'SPDR S&P 500 ETF Trust', price: 592.30, pe: 26.5, growth: 8.0, sector: 'Broad Market ETF', debtEq: 0, exchange: 'NYSE' },
+  QQQ: { name: 'Invesco QQQ Trust', price: 512.40, pe: 30.2, growth: 14.0, sector: 'Nasdaq-100 Tech ETF', debtEq: 0, exchange: 'NASDAQ' },
+  'BTC-USD': { name: 'Bitcoin USD', price: 89450.00, pe: 0, growth: 110.0, sector: 'Digital Assets & Store of Value', debtEq: 0, exchange: 'GLOBAL' },
+  'ETH-USD': { name: 'Ethereum USD', price: 3180.00, pe: 0, growth: 75.0, sector: 'Smart Contract Platform', debtEq: 0, exchange: 'GLOBAL' },
+  'SOL-USD': { name: 'Solana USD', price: 215.50, pe: 0, growth: 140.0, sector: 'High-Throughput L1 Blockchain', debtEq: 0, exchange: 'GLOBAL' },
 };
 
-function calculateCandleData(ticker: string, customDetails?: any) {
+function calculateCandleData(ticker: string, customDetails?: any, currency: 'INR' | 'USD' = 'INR', exchangePreference?: string) {
   const sym = ticker.toUpperCase().trim();
   const known = knownStocks[sym];
 
+  // Resolve exchange: NSE, BSE, NASDAQ, NYSE, or GLOBAL
+  let exchange: 'NSE' | 'BSE' | 'NASDAQ' | 'NYSE' | 'GLOBAL' = 'NSE';
+  if (customDetails?.exchange) {
+    exchange = customDetails.exchange;
+  } else if (exchangePreference && (exchangePreference === 'NSE' || exchangePreference === 'BSE')) {
+    exchange = exchangePreference;
+  } else if (known?.exchange) {
+    exchange = known.exchange;
+  } else if (sym.endsWith('.BO') || /^\d{6}$/.test(sym) || sym === 'SENSEX' || sym === 'BSE100') {
+    exchange = 'BSE';
+  } else if (sym.endsWith('.NS') || sym.includes('NIFTY')) {
+    exchange = 'NSE';
+  } else if (currency === 'INR') {
+    exchange = 'NSE';
+  } else {
+    exchange = 'NASDAQ';
+  }
+
+  // Price resolution: if in INR mode and stock is in USD without isINR flag, convert to INR
+  let basePrice = 120.0;
+  if (customDetails?.price !== undefined && customDetails.price > 0) {
+    basePrice = Number(customDetails.price);
+  } else if (known) {
+    if (currency === 'INR') {
+      basePrice = known.isINR ? known.price : Number((known.price * USD_TO_INR).toFixed(2));
+    } else {
+      basePrice = known.isINR ? Number((known.price / USD_TO_INR).toFixed(2)) : known.price;
+    }
+  }
+
   const seed = {
     name: customDetails?.companyName || known?.name || `${sym} Corporation`,
-    price: customDetails?.price !== undefined && customDetails.price > 0 ? Number(customDetails.price) : (known?.price || 120.0),
+    price: basePrice,
     pe: customDetails?.peRatio !== undefined ? Number(customDetails.peRatio) : (known?.pe !== undefined ? known.pe : 28.0),
     growth: customDetails?.revenueGrowth !== undefined ? Number(customDetails.revenueGrowth) : (known?.growth !== undefined ? known.growth : 18.0),
     sector: customDetails?.sector || known?.sector || 'Global Equities',
@@ -158,6 +251,7 @@ function calculateCandleData(ticker: string, customDetails?: any) {
   return {
     ticker: ticker.toUpperCase(),
     companyName: seed.name,
+    exchange,
     currentPrice,
     sector: seed.sector,
     candles,
@@ -203,10 +297,10 @@ function calculateCandleData(ticker: string, customDetails?: any) {
       putCallRatio: 0.68,
       mentionVolume: '148.5K mentions (24h)',
       headlines: (seed.customHeadlines && seed.customHeadlines.length > 0) ? seed.customHeadlines : [
-        `${seed.name} expands operational market presence with multi-year contract renewals.`,
-        `Wall Street analysts maintain positive coverage on ${seed.name} citing resilient product margins.`,
-        `Macro economic conditions remain stable, supporting sector equity valuation metrics.`,
-        `Management reaffirms long-term growth and capital allocation commitments.`,
+        `${seed.name} expands operational market presence on ${exchange} with multi-year contract renewals.`,
+        `Institutional analysts maintain positive coverage on ${seed.name} (${exchange}) citing resilient product margins.`,
+        `Macro economic conditions across India and global markets remain stable, supporting ${exchange} liquidity.`,
+        `Management reaffirms long-term growth and capital allocation commitments for shareholders.`,
       ],
     },
   };
@@ -215,55 +309,84 @@ function calculateCandleData(ticker: string, customDetails?: any) {
 // API: Search Stocks and Companies
 app.get('/api/search-stocks', (req, res) => {
   const query = ((req.query.q as string) || '').toUpperCase().trim();
-  const allList = Object.entries(knownStocks).map(([ticker, data]) => ({
-    ticker,
-    name: data.name,
-    price: data.price,
-    sector: data.sector,
-    pe: data.pe,
-    growth: data.growth,
-  }));
+  const currency = ((req.query.currency as string) || 'INR') as 'INR' | 'USD';
+  const exchangeFilter = ((req.query.exchange as string) || 'ALL').toUpperCase().trim();
+  
+  const allList = Object.entries(knownStocks).map(([ticker, data]) => {
+    let price = data.price;
+    if (currency === 'INR' && !data.isINR) {
+      price = Number((data.price * USD_TO_INR).toFixed(2));
+    } else if (currency === 'USD' && data.isINR) {
+      price = Number((data.price / USD_TO_INR).toFixed(2));
+    }
+    return {
+      ticker,
+      name: data.name,
+      price,
+      sector: data.sector,
+      pe: data.pe,
+      growth: data.growth,
+      isINR: data.isINR,
+      exchange: data.exchange,
+      bseCode: data.bseCode,
+      nseCode: data.nseCode,
+    };
+  });
 
-  if (!query) {
-    return res.json({ success: true, results: allList.slice(0, 16) });
+  let filtered = allList;
+  if (exchangeFilter !== 'ALL') {
+    filtered = filtered.filter((item) => item.exchange === exchangeFilter);
   }
 
-  const filtered = allList.filter(
-    (item) =>
-      item.ticker.includes(query) ||
-      item.name.toUpperCase().includes(query) ||
-      item.sector.toUpperCase().includes(query)
-  );
+  if (query) {
+    filtered = filtered.filter(
+      (item) =>
+        item.ticker.includes(query) ||
+        item.name.toUpperCase().includes(query) ||
+        item.sector.toUpperCase().includes(query) ||
+        (item.bseCode && item.bseCode.includes(query))
+    );
+  }
 
-  // If exact query is not present, add it as a custom searchable asset option
-  if (!filtered.some((item) => item.ticker === query)) {
+  // If exact query is not present and a search query exists, add custom asset option
+  if (query && !filtered.some((item) => item.ticker === query)) {
+    const isBseQuery = query.endsWith('.BO') || /^\d{6}$/.test(query);
+    const assignedExchange = exchangeFilter !== 'ALL' ? exchangeFilter : (isBseQuery ? 'BSE' : (currency === 'INR' ? 'NSE' : 'NASDAQ'));
     filtered.unshift({
       ticker: query,
       name: `${query} (Search / Custom Asset)`,
-      price: 100.0,
+      price: currency === 'INR' ? 1250.0 : 125.0,
       sector: 'Custom / Unlisted Asset',
       pe: 25.0,
       growth: 15.0,
+      isINR: currency === 'INR',
+      exchange: assignedExchange as any,
+      bseCode: undefined,
+      nseCode: undefined,
     });
   }
 
-  res.json({ success: true, results: filtered.slice(0, 15) });
+  res.json({ success: true, results: filtered.slice(0, 30) });
 });
 
 // API: Run Multi-Agent Trading Firm
 app.post('/api/run-firm', async (req, res) => {
   try {
     const {
-      ticker = 'NVDA',
+      ticker = 'RELIANCE',
       riskTolerance = 'moderate',
-      portfolioEquity = 100000,
+      portfolioEquity = 1000000,
       maxPositionSizePct = 10,
       customDetails,
+      currency = 'INR',
+      exchange: requestedExchange,
     } = req.body;
 
-    const market = calculateCandleData(ticker, customDetails);
+    const market = calculateCandleData(ticker, customDetails, currency, requestedExchange);
     const price = market.currentPrice;
     const atr = market.technicals.atr14;
+    const currSym = currency === 'INR' ? '₹' : '$';
+    const exchange = market.exchange;
 
     let aiOutput: any = null;
 
@@ -284,11 +407,11 @@ You are the central engine of an Autonomous AI Trading Firm with 4 specialist te
 3. Trader Agent:
    - Synthesizes all inputs into an actionable trade proposal (Action: BUY/SELL/HOLD, Order Type: LIMIT, Entry, Target, Stop Loss, Risk/Reward ratio >= 1:2.0, Position Size %)
 4. Chief Risk Officer / Portfolio Manager:
-   - Fiduciary review enforcing portfolio mandates (Max position size <= ${maxPositionSizePct}%, Max risk <= 2% of $${portfolioEquity.toLocaleString()} equity).
+   - Fiduciary review enforcing portfolio mandates (Max position size <= ${maxPositionSizePct}%, Max risk <= 2% of ${currSym}${portfolioEquity.toLocaleString()} equity).
    - Verdict: "APPROVED", "MODIFIED", or "REJECTED" with clear institutional reasoning.
 
 Market Intelligence for ${market.ticker} (${market.companyName}):
-Current Price: $${price}
+Current Price: ${currSym}${price} (${currency})
 Fundamentals: P/E: ${market.fundamentals.peRatio}, Rev Growth: ${market.fundamentals.revenueGrowth}%, Gross Margin: ${market.fundamentals.grossMargin}%, Debt/Equity: ${market.fundamentals.debtToEquity}
 Technicals: Trend: ${market.technicals.trend}, RSI 14: ${market.technicals.rsi14} (${market.technicals.rsiCondition}), SMA 20: $${market.technicals.sma20}, SMA 50: $${market.technicals.sma50}, ATR 14: $${atr}
 News Headlines: ${market.newsSentiment.headlines.join(' | ')}
@@ -493,6 +616,7 @@ Return only JSON.
       success: true,
       ticker: market.ticker,
       companyName: market.companyName,
+      exchange: market.exchange,
       sector: market.sector,
       currentPrice: market.currentPrice,
       candles: market.candles,
@@ -504,6 +628,7 @@ Return only JSON.
       tradeProposal: aiOutput.tradeProposal,
       riskAudit: aiOutput.riskAudit,
       engine: ai ? 'Google Gemini 3.8 Flash' : 'Quantitative Benchmark Engine',
+      currency,
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
@@ -521,6 +646,8 @@ app.get('/api/python-codebase', (_req, res) => {
     const filesToInclude = [
       'main.py',
       'requirements.txt',
+      'setup_laptop.sh',
+      'setup_laptop.bat',
       'Dockerfile',
       'docker-compose.yml',
       '.env.example',
@@ -554,6 +681,77 @@ app.get('/api/python-codebase', (_req, res) => {
     const codebase: Record<string, string> = {};
 
     for (const relPath of filesToInclude) {
+      const fullPath = path.resolve(__dirname, relPath);
+      if (fs.existsSync(fullPath)) {
+        codebase[relPath] = fs.readFileSync(fullPath, 'utf-8');
+      }
+    }
+
+    res.json({ success: true, files: codebase });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// API: Get Entire Full-Stack Project (Frontend + Backend + Python Framework)
+app.get('/api/full-codebase', (_req, res) => {
+  try {
+    const fullFilesToInclude = [
+      'package.json',
+      'tsconfig.json',
+      'vite.config.ts',
+      'index.html',
+      'metadata.json',
+      '.env.example',
+      'setup_laptop.sh',
+      'setup_laptop.bat',
+      'server.ts',
+      'main.py',
+      'requirements.txt',
+      'Dockerfile',
+      'docker-compose.yml',
+      'README.md',
+      'src/App.tsx',
+      'src/main.tsx',
+      'src/index.css',
+      'src/types.ts',
+      'src/utils/currency.ts',
+      'src/components/TopBar.tsx',
+      'src/components/ArenaView.tsx',
+      'src/components/TerminalView.tsx',
+      'src/components/ChartView.tsx',
+      'src/components/CodebaseView.tsx',
+      'src/components/SettingsView.tsx',
+      'src/components/StockSearchModal.tsx',
+      'trading_firm/__init__.py',
+      'trading_firm/config.py',
+      'trading_firm/pipeline.py',
+      'trading_firm/cli.py',
+      'trading_firm/llm/__init__.py',
+      'trading_firm/llm/base.py',
+      'trading_firm/llm/gemini_provider.py',
+      'trading_firm/llm/openai_provider.py',
+      'trading_firm/llm/anthropic_provider.py',
+      'trading_firm/llm/factory.py',
+      'trading_firm/data/__init__.py',
+      'trading_firm/data/market_data.py',
+      'trading_firm/data/technical.py',
+      'trading_firm/data/news_sentiment.py',
+      'trading_firm/agents/__init__.py',
+      'trading_firm/agents/base_agent.py',
+      'trading_firm/agents/fundamental_analyst.py',
+      'trading_firm/agents/technical_analyst.py',
+      'trading_firm/agents/news_analyst.py',
+      'trading_firm/agents/sentiment_analyst.py',
+      'trading_firm/agents/bull_researcher.py',
+      'trading_firm/agents/bear_researcher.py',
+      'trading_firm/agents/trader.py',
+      'trading_firm/agents/risk_manager.py',
+    ];
+
+    const codebase: Record<string, string> = {};
+
+    for (const relPath of fullFilesToInclude) {
       const fullPath = path.resolve(__dirname, relPath);
       if (fs.existsSync(fullPath)) {
         codebase[relPath] = fs.readFileSync(fullPath, 'utf-8');

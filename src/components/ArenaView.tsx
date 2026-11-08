@@ -1,5 +1,6 @@
 import React from 'react';
 import { FirmRunResult } from '../types';
+import { formatCurrency, CurrencyCode } from '../utils/currency';
 import { 
   Building2, 
   Activity, 
@@ -19,15 +20,19 @@ import {
 interface ArenaViewProps {
   data: FirmRunResult | null;
   isRunning: boolean;
+  currency?: CurrencyCode;
   onOpenSearch?: () => void;
   onSelectQuickTicker?: (ticker: string) => void;
+  onSwitchExchange?: (newExchange: 'NSE' | 'BSE') => void;
 }
 
 export const ArenaView: React.FC<ArenaViewProps> = ({
   data,
   isRunning,
+  currency = 'INR',
   onOpenSearch,
   onSelectQuickTicker,
+  onSwitchExchange,
 }) => {
   if (isRunning && !data) {
     return (
@@ -59,6 +64,7 @@ export const ArenaView: React.FC<ArenaViewProps> = ({
     ticker,
     companyName,
     sector,
+    exchange = 'NSE',
     currentPrice,
     technicals,
     fundamentals,
@@ -71,6 +77,7 @@ export const ArenaView: React.FC<ArenaViewProps> = ({
 
   const isApproved = riskAudit.verdict === 'APPROVED';
   const isModified = riskAudit.verdict === 'MODIFIED';
+  const isIndianExchange = exchange === 'NSE' || exchange === 'BSE';
 
   return (
     <div className="space-y-8">
@@ -82,14 +89,36 @@ export const ArenaView: React.FC<ArenaViewProps> = ({
               {ticker.slice(0, 4)}
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-xl font-bold text-white tracking-tight">{ticker}</h2>
+                {/* Exchange Badge */}
+                <span className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold border ${
+                  exchange === 'BSE'
+                    ? 'bg-amber-950/80 text-amber-300 border-amber-700'
+                    : exchange === 'NSE'
+                    ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700'
+                    : 'bg-blue-950/80 text-blue-300 border-blue-700'
+                }`}>
+                  {exchange === 'NSE' ? 'NSE India' : exchange === 'BSE' ? 'BSE Mumbai' : exchange}
+                </span>
+
+                {/* 1-Click Alternate Indian Exchange Switcher */}
+                {isIndianExchange && onSwitchExchange && (
+                  <button
+                    onClick={() => onSwitchExchange(exchange === 'NSE' ? 'BSE' : 'NSE')}
+                    className="text-[11px] font-mono text-cyan-400 hover:text-cyan-300 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 hover:border-cyan-800 transition-colors"
+                    title={`Switch exchange routing to ${exchange === 'NSE' ? 'Bombay Stock Exchange (BSE)' : 'National Stock Exchange (NSE)'}`}
+                  >
+                    Switch to {exchange === 'NSE' ? 'BSE' : 'NSE'} &rarr;
+                  </button>
+                )}
+
                 <span className="text-slate-400 text-sm">·</span>
                 <span className="text-sm font-medium text-slate-300">{companyName}</span>
                 <span className="text-slate-400 text-sm">·</span>
                 <span className="text-xs text-slate-400">{sector}</span>
               </div>
-              <div className="flex items-center gap-3 mt-1 text-xs text-slate-400 font-mono">
+              <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400 font-mono">
                 <span>P/E: <strong className="text-slate-200 tabular-nums">{fundamentals.peRatio || 'N/A'}</strong></span>
                 <span>·</span>
                 <span>Rev Growth: <strong className="text-slate-200 tabular-nums">+{fundamentals.revenueGrowth}%</strong></span>
@@ -102,12 +131,12 @@ export const ArenaView: React.FC<ArenaViewProps> = ({
           <div className="flex flex-wrap items-center gap-4 border-t md:border-t-0 border-slate-800 pt-3 md:pt-0">
             <div className="text-right">
               <span className="text-[11px] uppercase tracking-wider text-slate-500 font-mono block">Last Close</span>
-              <span className="text-2xl font-bold font-mono tabular-nums text-white">${currentPrice.toFixed(2)}</span>
+              <span className="text-2xl font-bold font-mono tabular-nums text-white">{formatCurrency(currentPrice, currency)}</span>
             </div>
             <div className="text-right hidden sm:block">
               <span className="text-[11px] uppercase tracking-wider text-slate-500 font-mono block">52W Range</span>
               <span className="text-xs font-mono tabular-nums text-slate-300">
-                ${fundamentals.low52w.toFixed(2)} - ${fundamentals.high52w.toFixed(2)}
+                {formatCurrency(fundamentals.low52w, currency)} - {formatCurrency(fundamentals.high52w, currency)}
               </span>
             </div>
             {onOpenSearch && (
@@ -121,21 +150,47 @@ export const ArenaView: React.FC<ArenaViewProps> = ({
           </div>
         </div>
 
+        {/* Live Exchange Session Info Banner */}
+        <div className="mt-3.5 pt-2.5 border-t border-slate-800/60 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="text-slate-300 font-semibold">Indian Markets Session:</span>
+            <span>NSE / BSE Normal Trading 09:15 – 15:30 IST</span>
+            <span>·</span>
+            <span>Pre-Open 09:00 – 09:15 IST</span>
+            <span>·</span>
+            <span>Settlement: T+1 Rolling</span>
+          </div>
+          <div>
+            <span>Order Routing: Direct Market Access ({exchange})</span>
+          </div>
+        </div>
+
         {/* Quick Tickers & Custom Asset Bar */}
-        <div className="mt-4 pt-3 border-t border-slate-800/60 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div className="mt-3 pt-3 border-t border-slate-800/60 flex flex-wrap items-center justify-between gap-2 text-xs">
           <div className="flex flex-wrap items-center gap-1.5 font-mono">
             <span className="text-slate-500 text-[11px]">Quick Assets:</span>
-            {['NVDA', 'AAPL', 'MSFT', 'TSLA', 'PLTR', 'COIN', 'LLY', 'BTC-USD', 'SPY'].map((t) => (
+            {[
+              { ticker: 'RELIANCE', label: 'NSE: RELIANCE' },
+              { ticker: '500325', label: 'BSE: 500325 (Reliance)' },
+              { ticker: 'TCS', label: 'NSE: TCS' },
+              { ticker: '532540', label: 'BSE: 532540 (TCS)' },
+              { ticker: 'INFY', label: 'NSE: INFY' },
+              { ticker: 'HDFCBANK', label: 'NSE: HDFCBANK' },
+              { ticker: 'NIFTY50', label: 'NSE: NIFTY 50' },
+              { ticker: 'SENSEX', label: 'BSE: SENSEX' },
+              { ticker: 'NVDA', label: 'NASDAQ: NVDA' },
+            ].map((item) => (
               <button
-                key={t}
-                onClick={() => onSelectQuickTicker && onSelectQuickTicker(t)}
+                key={item.ticker}
+                onClick={() => onSelectQuickTicker && onSelectQuickTicker(item.ticker)}
                 className={`px-2 py-0.5 rounded text-[11px] transition-colors ${
-                  t === ticker
+                  item.ticker === ticker
                     ? 'bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold'
                     : 'bg-slate-950/60 text-slate-400 hover:text-white border border-slate-800/80 hover:border-slate-700'
                 }`}
               >
-                {t}
+                {item.label}
               </button>
             ))}
           </div>
@@ -221,7 +276,7 @@ export const ArenaView: React.FC<ArenaViewProps> = ({
             <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between text-xs font-mono text-slate-400">
               <span>Fair Value Model:</span>
               <span className="font-semibold text-slate-200 tabular-nums">
-                ${analystReports.fundamental.fairValueEstimate.toFixed(2)}
+                {formatCurrency(analystReports.fundamental.fairValueEstimate, currency)}
               </span>
             </div>
           </div>
@@ -261,7 +316,7 @@ export const ArenaView: React.FC<ArenaViewProps> = ({
                 <div className="flex justify-between">
                   <span className="text-slate-400">Support / Resistance:</span>
                   <span className="text-slate-200 tabular-nums">
-                    ${analystReports.technical.supportLevel.toFixed(2)} / ${analystReports.technical.resistanceLevel.toFixed(2)}
+                    {formatCurrency(analystReports.technical.supportLevel, currency)} / {formatCurrency(analystReports.technical.resistanceLevel, currency)}
                   </span>
                 </div>
               </div>
@@ -270,7 +325,7 @@ export const ArenaView: React.FC<ArenaViewProps> = ({
             <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between text-xs font-mono text-slate-400">
               <span>SMA 50 / 200 Cross:</span>
               <span className="font-semibold text-emerald-400">
-                ${technicals.sma50} &gt; ${technicals.sma200}
+                {formatCurrency(technicals.sma50, currency)} &gt; {formatCurrency(technicals.sma200, currency)}
               </span>
             </div>
           </div>
@@ -407,7 +462,7 @@ export const ArenaView: React.FC<ArenaViewProps> = ({
             <div className="mt-4 pt-3 border-t border-emerald-900/30 flex justify-between text-xs font-mono">
               <span className="text-slate-400">Modeled Target Upside:</span>
               <span className="font-bold text-emerald-400 tabular-nums">
-                ${researcherDebate.bullCase.targetUpside.toFixed(2)} (+{(((researcherDebate.bullCase.targetUpside - currentPrice) / currentPrice) * 100).toFixed(1)}%)
+                {formatCurrency(researcherDebate.bullCase.targetUpside, currency)} (+{(((researcherDebate.bullCase.targetUpside - currentPrice) / currentPrice) * 100).toFixed(1)}%)
               </span>
             </div>
           </div>
@@ -442,7 +497,7 @@ export const ArenaView: React.FC<ArenaViewProps> = ({
             <div className="mt-4 pt-3 border-t border-rose-900/30 flex justify-between text-xs font-mono">
               <span className="text-slate-400">Downside Stress Target:</span>
               <span className="font-bold text-rose-400 tabular-nums">
-                ${researcherDebate.bearCase.targetDownside.toFixed(2)} ({(((researcherDebate.bearCase.targetDownside - currentPrice) / currentPrice) * 100).toFixed(1)}%)
+                {formatCurrency(researcherDebate.bearCase.targetDownside, currency)} ({(((researcherDebate.bearCase.targetDownside - currentPrice) / currentPrice) * 100).toFixed(1)}%)
               </span>
             </div>
           </div>
@@ -492,24 +547,30 @@ export const ArenaView: React.FC<ArenaViewProps> = ({
               <div className="p-3 bg-slate-950/60 rounded-lg border border-slate-800 text-center">
                 <span className="text-[10px] uppercase font-mono text-slate-500 block">Entry Limit</span>
                 <span className="text-base font-mono font-bold tabular-nums text-white">
-                  ${tradeProposal.entryPrice.toFixed(2)}
+                  {formatCurrency(tradeProposal.entryPrice, currency)}
                 </span>
               </div>
               <div className="p-3 bg-slate-950/60 rounded-lg border border-slate-800 text-center">
                 <span className="text-[10px] uppercase font-mono text-slate-500 block">Stop Loss</span>
                 <span className="text-base font-mono font-bold tabular-nums text-rose-400">
-                  ${tradeProposal.stopLoss.toFixed(2)}
+                  {formatCurrency(tradeProposal.stopLoss, currency)}
                 </span>
               </div>
               <div className="p-3 bg-slate-950/60 rounded-lg border border-slate-800 text-center">
                 <span className="text-[10px] uppercase font-mono text-slate-500 block">Take Profit</span>
                 <span className="text-base font-mono font-bold tabular-nums text-emerald-400">
-                  ${tradeProposal.targetPrice.toFixed(2)}
+                  {formatCurrency(tradeProposal.targetPrice, currency)}
                 </span>
               </div>
             </div>
 
             <div className="space-y-2 text-xs text-slate-300 font-mono mb-4">
+              <div className="flex justify-between py-1 border-b border-slate-800/50">
+                <span className="text-slate-400">Order Routing:</span>
+                <span className={`font-semibold ${exchange === 'BSE' ? 'text-amber-300' : 'text-emerald-300'}`}>
+                  {exchange === 'NSE' ? 'NSE (National Stock Exchange)' : exchange === 'BSE' ? 'BSE (Bombay Stock Exchange)' : exchange}
+                </span>
+              </div>
               <div className="flex justify-between py-1 border-b border-slate-800/50">
                 <span className="text-slate-400">Risk-to-Reward Ratio:</span>
                 <span className="font-semibold text-cyan-300">1 : {tradeProposal.riskRewardRatio}</span>
@@ -597,8 +658,8 @@ export const ArenaView: React.FC<ArenaViewProps> = ({
                 <span className="text-sm font-bold text-white tabular-nums">{riskAudit.approvedShares.toLocaleString()} shares</span>
               </div>
               <div className="p-2.5 rounded bg-slate-950/60 border border-slate-800">
-                <span className="text-[10px] uppercase text-slate-500 block">Max Dollar Loss Cap</span>
-                <span className="text-sm font-bold text-rose-400 tabular-nums">${riskAudit.maxDollarLoss.toLocaleString()}</span>
+                <span className="text-[10px] uppercase text-slate-500 block">Max Risk Loss Cap</span>
+                <span className="text-sm font-bold text-rose-400 tabular-nums">{formatCurrency(riskAudit.maxDollarLoss, currency)}</span>
               </div>
             </div>
 
