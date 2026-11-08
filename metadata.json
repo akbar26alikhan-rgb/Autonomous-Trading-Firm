@@ -1,0 +1,6 @@
+{
+  "name": "Autonomous AI Trading Firm",
+  "description": "Multi-agent autonomous trading firm framework featuring specialized Analyst, Researcher, Trader, and Risk Manager teams with CLI, multi-LLM support, and Docker.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

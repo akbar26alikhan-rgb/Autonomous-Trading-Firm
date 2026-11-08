@@ -1,0 +1,10 @@
+google-genai>=2.4.0
+openai>=1.14.0
+anthropic>=0.18.0
+yfinance>=0.2.36
+pandas>=2.2.0
+numpy>=1.26.0
+rich>=13.7.0
+click>=8.1.7
+pydantic>=2.6.0
+python-dotenv>=1.0.0

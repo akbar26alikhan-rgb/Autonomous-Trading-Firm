@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  trading-firm:
+    build: .
+    container_name: ai_trading_firm
+    stdin_open: true
+    tty: true
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./reports:/app/reports
+    command: ["--ticker", "NVDA", "--provider", "gemini", "--model", "gemini-3.8-flash"]
