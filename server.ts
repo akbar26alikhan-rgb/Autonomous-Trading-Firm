@@ -31,27 +31,50 @@ if (process.env.GEMINI_API_KEY) {
 }
 
 // Technical indicator calculations (in TS for backend execution)
-function calculateCandleData(ticker: string) {
-  const knownStocks: Record<string, { name: string; price: number; pe: number; growth: number; sector: string; debtEq: number }> = {
-    NVDA: { name: 'NVIDIA Corporation', price: 138.25, pe: 48.2, growth: 82.5, sector: 'Semiconductors', debtEq: 21.4 },
-    AAPL: { name: 'Apple Inc.', price: 234.50, pe: 33.1, growth: 6.8, sector: 'Consumer Electronics', debtEq: 145.0 },
-    MSFT: { name: 'Microsoft Corporation', price: 422.80, pe: 34.6, growth: 15.2, sector: 'Cloud & AI Software', debtEq: 38.5 },
-    TSLA: { name: 'Tesla, Inc.', price: 288.90, pe: 68.4, growth: 9.2, sector: 'EV & Autonomous Systems', debtEq: 12.0 },
-    'BTC-USD': { name: 'Bitcoin USD', price: 89450.00, pe: 0, growth: 110.0, sector: 'Digital Assets', debtEq: 0 },
-    'ETH-USD': { name: 'Ethereum USD', price: 3180.00, pe: 0, growth: 75.0, sector: 'Smart Contracts', debtEq: 0 },
-    AMD: { name: 'Advanced Micro Devices', price: 142.60, pe: 42.0, growth: 28.0, sector: 'Semiconductors', debtEq: 15.0 },
-    GOOGL: { name: 'Alphabet Inc.', price: 178.40, pe: 22.8, growth: 14.5, sector: 'Search & Cloud AI', debtEq: 10.2 },
-    AMZN: { name: 'Amazon.com, Inc.', price: 204.10, pe: 41.5, growth: 12.8, sector: 'E-Commerce & Cloud', debtEq: 52.0 },
-    SPY: { name: 'SPDR S&P 500 ETF Trust', price: 592.30, pe: 26.5, growth: 8.0, sector: 'Broad Market ETF', debtEq: 0 },
-  };
+// Technical indicator calculations (in TS for backend execution)
+const knownStocks: Record<string, { name: string; price: number; pe: number; growth: number; sector: string; debtEq: number; headlines?: string[] }> = {
+  NVDA: { name: 'NVIDIA Corporation', price: 138.25, pe: 48.2, growth: 82.5, sector: 'Semiconductors', debtEq: 21.4 },
+  AAPL: { name: 'Apple Inc.', price: 234.50, pe: 33.1, growth: 6.8, sector: 'Consumer Electronics', debtEq: 145.0 },
+  MSFT: { name: 'Microsoft Corporation', price: 422.80, pe: 34.6, growth: 15.2, sector: 'Cloud & AI Software', debtEq: 38.5 },
+  TSLA: { name: 'Tesla, Inc.', price: 288.90, pe: 68.4, growth: 9.2, sector: 'EV & Autonomous Systems', debtEq: 12.0 },
+  GOOGL: { name: 'Alphabet Inc.', price: 178.40, pe: 22.8, growth: 14.5, sector: 'Search & Cloud AI', debtEq: 10.2 },
+  AMZN: { name: 'Amazon.com, Inc.', price: 204.10, pe: 41.5, growth: 12.8, sector: 'E-Commerce & Cloud', debtEq: 52.0 },
+  META: { name: 'Meta Platforms, Inc.', price: 588.20, pe: 28.4, growth: 18.9, sector: 'Social Media & AI', debtEq: 18.0 },
+  PLTR: { name: 'Palantir Technologies', price: 62.40, pe: 88.5, growth: 30.2, sector: 'Enterprise AI & Defense', debtEq: 0.0 },
+  AMD: { name: 'Advanced Micro Devices', price: 142.60, pe: 42.0, growth: 28.0, sector: 'Semiconductors', debtEq: 15.0 },
+  AVGO: { name: 'Broadcom Inc.', price: 172.50, pe: 36.2, growth: 44.0, sector: 'Semiconductors & Networking', debtEq: 92.0 },
+  TSM: { name: 'Taiwan Semiconductor', price: 194.80, pe: 24.5, growth: 36.0, sector: 'Semiconductor Foundry', debtEq: 22.0 },
+  ASML: { name: 'ASML Holding N.V.', price: 712.00, pe: 38.1, growth: 18.5, sector: 'Lithography Equipment', debtEq: 25.0 },
+  COIN: { name: 'Coinbase Global, Inc.', price: 295.40, pe: 44.0, growth: 78.0, sector: 'Crypto Exchange & Fintech', debtEq: 45.0 },
+  NFLX: { name: 'Netflix, Inc.', price: 825.00, pe: 41.2, growth: 15.8, sector: 'Streaming Media', debtEq: 65.0 },
+  CRM: { name: 'Salesforce, Inc.', price: 328.00, pe: 45.0, growth: 11.2, sector: 'Enterprise Cloud CRM', debtEq: 20.0 },
+  ORCL: { name: 'Oracle Corporation', price: 188.50, pe: 40.8, growth: 14.0, sector: 'Cloud Infrastructure', debtEq: 180.0 },
+  LLY: { name: 'Eli Lilly and Company', price: 842.00, pe: 54.0, growth: 32.0, sector: 'Pharmaceuticals & GLP-1', debtEq: 80.0 },
+  NVO: { name: 'Novo Nordisk A/S', price: 112.50, pe: 32.0, growth: 24.0, sector: 'Healthcare & Therapeutics', debtEq: 15.0 },
+  JPM: { name: 'JPMorgan Chase & Co.', price: 244.20, pe: 12.8, growth: 9.5, sector: 'Investment Banking', debtEq: 160.0 },
+  V: { name: 'Visa Inc.', price: 310.50, pe: 31.0, growth: 10.2, sector: 'Payment Networks', debtEq: 45.0 },
+  COST: { name: 'Costco Wholesale Corp.', price: 955.00, pe: 52.0, growth: 8.5, sector: 'Discount Wholesale Retail', debtEq: 18.0 },
+  WMT: { name: 'Walmart Inc.', price: 88.40, pe: 34.0, growth: 6.2, sector: 'Consumer Retail', debtEq: 70.0 },
+  SPY: { name: 'SPDR S&P 500 ETF Trust', price: 592.30, pe: 26.5, growth: 8.0, sector: 'Broad Market ETF', debtEq: 0 },
+  QQQ: { name: 'Invesco QQQ Trust', price: 512.40, pe: 30.2, growth: 14.0, sector: 'Nasdaq-100 Tech ETF', debtEq: 0 },
+  'BTC-USD': { name: 'Bitcoin USD', price: 89450.00, pe: 0, growth: 110.0, sector: 'Digital Assets & Store of Value', debtEq: 0 },
+  'ETH-USD': { name: 'Ethereum USD', price: 3180.00, pe: 0, growth: 75.0, sector: 'Smart Contract Platform', debtEq: 0 },
+  'SOL-USD': { name: 'Solana USD', price: 215.50, pe: 0, growth: 140.0, sector: 'High-Throughput L1 Blockchain', debtEq: 0 },
+};
 
-  const seed = knownStocks[ticker.toUpperCase()] || {
-    name: `${ticker.toUpperCase()} Corporation`,
-    price: 115.0,
-    pe: 28.0,
-    growth: 16.5,
-    sector: 'Global Equities',
-    debtEq: 35.0,
+function calculateCandleData(ticker: string, customDetails?: any) {
+  const sym = ticker.toUpperCase().trim();
+  const known = knownStocks[sym];
+
+  const seed = {
+    name: customDetails?.companyName || known?.name || `${sym} Corporation`,
+    price: customDetails?.price !== undefined && customDetails.price > 0 ? Number(customDetails.price) : (known?.price || 120.0),
+    pe: customDetails?.peRatio !== undefined ? Number(customDetails.peRatio) : (known?.pe !== undefined ? known.pe : 28.0),
+    growth: customDetails?.revenueGrowth !== undefined ? Number(customDetails.revenueGrowth) : (known?.growth !== undefined ? known.growth : 18.0),
+    sector: customDetails?.sector || known?.sector || 'Global Equities',
+    debtEq: customDetails?.debtToEquity !== undefined ? Number(customDetails.debtToEquity) : (known?.debtEq !== undefined ? known.debtEq : 35.0),
+    grossMargin: customDetails?.grossMargin !== undefined ? Number(customDetails.grossMargin) : 64.5,
+    customHeadlines: customDetails?.headlines,
   };
 
   const candles: Array<{ date: string; open: number; high: number; low: number; close: number; volume: number }> = [];
@@ -179,15 +202,53 @@ function calculateCandleData(ticker: string) {
       fearGreedLabel: 'Greed',
       putCallRatio: 0.68,
       mentionVolume: '148.5K mentions (24h)',
-      headlines: [
-        `${seed.name} accelerates enterprise infrastructure footprint across major data centers.`,
-        `Wall Street analysts maintain Overweight posture with upward revision in forward FY cash flow estimates.`,
-        `Macro liquidity remains supportive with cooling core inflation metrics.`,
-        `Supply chain execution stabilizes gross margins above multi-quarter guidance.`,
+      headlines: (seed.customHeadlines && seed.customHeadlines.length > 0) ? seed.customHeadlines : [
+        `${seed.name} expands operational market presence with multi-year contract renewals.`,
+        `Wall Street analysts maintain positive coverage on ${seed.name} citing resilient product margins.`,
+        `Macro economic conditions remain stable, supporting sector equity valuation metrics.`,
+        `Management reaffirms long-term growth and capital allocation commitments.`,
       ],
     },
   };
 }
+
+// API: Search Stocks and Companies
+app.get('/api/search-stocks', (req, res) => {
+  const query = ((req.query.q as string) || '').toUpperCase().trim();
+  const allList = Object.entries(knownStocks).map(([ticker, data]) => ({
+    ticker,
+    name: data.name,
+    price: data.price,
+    sector: data.sector,
+    pe: data.pe,
+    growth: data.growth,
+  }));
+
+  if (!query) {
+    return res.json({ success: true, results: allList.slice(0, 16) });
+  }
+
+  const filtered = allList.filter(
+    (item) =>
+      item.ticker.includes(query) ||
+      item.name.toUpperCase().includes(query) ||
+      item.sector.toUpperCase().includes(query)
+  );
+
+  // If exact query is not present, add it as a custom searchable asset option
+  if (!filtered.some((item) => item.ticker === query)) {
+    filtered.unshift({
+      ticker: query,
+      name: `${query} (Search / Custom Asset)`,
+      price: 100.0,
+      sector: 'Custom / Unlisted Asset',
+      pe: 25.0,
+      growth: 15.0,
+    });
+  }
+
+  res.json({ success: true, results: filtered.slice(0, 15) });
+});
 
 // API: Run Multi-Agent Trading Firm
 app.post('/api/run-firm', async (req, res) => {
@@ -197,9 +258,10 @@ app.post('/api/run-firm', async (req, res) => {
       riskTolerance = 'moderate',
       portfolioEquity = 100000,
       maxPositionSizePct = 10,
+      customDetails,
     } = req.body;
 
-    const market = calculateCandleData(ticker);
+    const market = calculateCandleData(ticker, customDetails);
     const price = market.currentPrice;
     const atr = market.technicals.atr14;
 

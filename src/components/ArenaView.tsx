@@ -19,9 +19,16 @@ import {
 interface ArenaViewProps {
   data: FirmRunResult | null;
   isRunning: boolean;
+  onOpenSearch?: () => void;
+  onSelectQuickTicker?: (ticker: string) => void;
 }
 
-export const ArenaView: React.FC<ArenaViewProps> = ({ data, isRunning }) => {
+export const ArenaView: React.FC<ArenaViewProps> = ({
+  data,
+  isRunning,
+  onOpenSearch,
+  onSelectQuickTicker,
+}) => {
   if (isRunning && !data) {
     return (
       <div className="py-24 text-center">
@@ -92,18 +99,55 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ data, isRunning }) => {
             </div>
           </div>
 
-          <div className="flex items-center gap-6 border-t md:border-t-0 border-slate-800 pt-3 md:pt-0">
+          <div className="flex flex-wrap items-center gap-4 border-t md:border-t-0 border-slate-800 pt-3 md:pt-0">
             <div className="text-right">
               <span className="text-[11px] uppercase tracking-wider text-slate-500 font-mono block">Last Close</span>
               <span className="text-2xl font-bold font-mono tabular-nums text-white">${currentPrice.toFixed(2)}</span>
             </div>
-            <div className="text-right">
+            <div className="text-right hidden sm:block">
               <span className="text-[11px] uppercase tracking-wider text-slate-500 font-mono block">52W Range</span>
               <span className="text-xs font-mono tabular-nums text-slate-300">
                 ${fundamentals.low52w.toFixed(2)} - ${fundamentals.high52w.toFixed(2)}
               </span>
             </div>
+            {onOpenSearch && (
+              <button
+                onClick={onOpenSearch}
+                className="flex items-center gap-2 px-3.5 py-2 bg-slate-800/80 hover:bg-slate-700/80 text-cyan-300 border border-slate-700 rounded-lg text-xs font-semibold transition-all shadow-sm"
+              >
+                <span>Search / Custom Asset</span>
+              </button>
+            )}
           </div>
+        </div>
+
+        {/* Quick Tickers & Custom Asset Bar */}
+        <div className="mt-4 pt-3 border-t border-slate-800/60 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex flex-wrap items-center gap-1.5 font-mono">
+            <span className="text-slate-500 text-[11px]">Quick Assets:</span>
+            {['NVDA', 'AAPL', 'MSFT', 'TSLA', 'PLTR', 'COIN', 'LLY', 'BTC-USD', 'SPY'].map((t) => (
+              <button
+                key={t}
+                onClick={() => onSelectQuickTicker && onSelectQuickTicker(t)}
+                className={`px-2 py-0.5 rounded text-[11px] transition-colors ${
+                  t === ticker
+                    ? 'bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold'
+                    : 'bg-slate-950/60 text-slate-400 hover:text-white border border-slate-800/80 hover:border-slate-700'
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+
+          {onOpenSearch && (
+            <button
+              onClick={onOpenSearch}
+              className="text-cyan-400 hover:text-cyan-300 font-mono text-[11px] underline underline-offset-4"
+            >
+              + Input Custom Stock Details / Scenario
+            </button>
+          )}
         </div>
       </div>
 

@@ -5,7 +5,7 @@ interface TopBarProps {
   activeTab: 'arena' | 'terminal' | 'chart' | 'codebase' | 'settings';
   setActiveTab: (tab: 'arena' | 'terminal' | 'chart' | 'codebase' | 'settings') => void;
   selectedTicker: string;
-  onSelectTicker: (ticker: string) => void;
+  onOpenSearch: () => void;
   onRunAnalysis: () => void;
   isRunning: boolean;
 }
@@ -14,24 +14,13 @@ export const TopBar: React.FC<TopBarProps> = ({
   activeTab,
   setActiveTab,
   selectedTicker,
-  onSelectTicker,
+  onOpenSearch,
   onRunAnalysis,
   isRunning,
 }) => {
-  const [customTicker, setCustomTicker] = useState('');
-  const popularTickers = ['NVDA', 'AAPL', 'MSFT', 'TSLA', 'BTC-USD', 'ETH-USD', 'AMD', 'SPY'];
-
-  const handleCustomSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (customTicker.trim()) {
-      onSelectTicker(customTicker.trim().toUpperCase());
-      setCustomTicker('');
-    }
-  };
-
   return (
     <header className="border-b border-slate-800 bg-slate-900/90 backdrop-blur-md px-6 py-3.5 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-8">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-6">
         {/* Zone 1: Brand wordmark */}
         <div className="flex items-center gap-3 shrink-0">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-sm font-mono font-bold text-sm tracking-wider">
@@ -48,7 +37,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         </div>
 
         {/* Zone 2: Navigation Links */}
-        <nav className="hidden lg:flex items-center gap-1 shrink-0 p-1 bg-slate-950/60 rounded-lg border border-slate-800">
+        <nav className="hidden xl:flex items-center gap-1 shrink-0 p-1 bg-slate-950/60 rounded-lg border border-slate-800">
           <button
             onClick={() => setActiveTab('arena')}
             className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${
@@ -106,40 +95,23 @@ export const TopBar: React.FC<TopBarProps> = ({
           </button>
         </nav>
 
-        {/* Zone 3: Ticker Selector & Primary Run Action */}
+        {/* Zone 3: Search Any Stock & Primary Run Action */}
         <div className="flex items-center gap-3 shrink-0">
-          <div className="flex items-center bg-slate-950 border border-slate-800 rounded-lg p-0.5">
-            <select
-              value={popularTickers.includes(selectedTicker) ? selectedTicker : 'CUSTOM'}
-              onChange={(e) => {
-                if (e.target.value !== 'CUSTOM') {
-                  onSelectTicker(e.target.value);
-                }
-              }}
-              aria-label="Select ticker symbol"
-              className="bg-transparent text-xs font-mono font-medium text-slate-200 px-2.5 py-1.5 focus:outline-none cursor-pointer"
-            >
-              {popularTickers.map((t) => (
-                <option key={t} value={t} className="bg-slate-900 text-slate-100">
-                  {t}
-                </option>
-              ))}
-              {!popularTickers.includes(selectedTicker) && (
-                <option value="CUSTOM" className="bg-slate-900 text-slate-100">
-                  {selectedTicker}
-                </option>
-              )}
-            </select>
-            <form onSubmit={handleCustomSubmit} className="hidden sm:flex items-center">
-              <input
-                type="text"
-                placeholder="Custom..."
-                value={customTicker}
-                onChange={(e) => setCustomTicker(e.target.value)}
-                className="w-20 bg-slate-900/60 text-xs font-mono text-slate-200 px-2 py-1 rounded border-l border-slate-800 focus:outline-none focus:bg-slate-800 uppercase placeholder:normal-case placeholder:text-slate-500"
-              />
-            </form>
-          </div>
+          {/* Prominent Stock Search & Custom Input Trigger */}
+          <button
+            onClick={onOpenSearch}
+            className="flex items-center gap-2 px-3 py-1.5 bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-lg text-xs transition-colors group cursor-pointer"
+            title="Search any stock or input custom company details"
+          >
+            <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
+            <span className="font-mono font-bold text-white group-hover:text-cyan-300">
+              {selectedTicker}
+            </span>
+            <span className="text-slate-500 text-[11px] hidden sm:inline">· Search / Input Stock</span>
+            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-slate-900 text-slate-400 border border-slate-800 rounded">
+              ⌘K
+            </kbd>
+          </button>
 
           <button
             onClick={onRunAnalysis}

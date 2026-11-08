@@ -7,6 +7,26 @@ export interface Candle {
   volume: number;
 }
 
+export interface CustomStockDetails {
+  companyName?: string;
+  price?: number;
+  peRatio?: number;
+  revenueGrowth?: number;
+  grossMargin?: number;
+  debtToEquity?: number;
+  sector?: string;
+  headlines?: string[];
+}
+
+export interface StockSearchResult {
+  ticker: string;
+  name: string;
+  price: number;
+  sector: string;
+  pe: number;
+  growth: number;
+}
+
 export interface TechnicalData {
   rsi14: number;
   rsiCondition: string;

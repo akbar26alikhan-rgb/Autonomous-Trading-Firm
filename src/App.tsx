@@ -5,7 +5,8 @@ import { TerminalView } from './components/TerminalView';
 import { ChartView } from './components/ChartView';
 import { CodebaseView } from './components/CodebaseView';
 import { SettingsView } from './components/SettingsView';
-import { FirmRunResult } from './types';
+import { StockSearchModal } from './components/StockSearchModal';
+import { FirmRunResult, CustomStockDetails } from './types';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'arena' | 'terminal' | 'chart' | 'codebase' | 'settings'>('arena');
@@ -18,8 +19,9 @@ export default function App() {
   const [firmData, setFirmData] = useState<FirmRunResult | null>(null);
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
 
-  const runAnalysis = async (tickerToRun: string = selectedTicker) => {
+  const runAnalysis = async (tickerToRun: string = selectedTicker, customDetails?: CustomStockDetails) => {
     try {
       setIsRunning(true);
       setError(null);
@@ -35,6 +37,7 @@ export default function App() {
           portfolioEquity,
           maxPositionSizePct,
           provider: activeProvider,
+          customDetails,
         }),
       });
 
@@ -61,6 +64,18 @@ export default function App() {
     runAnalysis('NVDA');
   }, []);
 
+  // Keyboard shortcut listener for Cmd+K and /
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const handleTerminalCommand = (cmd: string) => {
     // Extract ticker from command if present: --ticker <TICKER> or -t <TICKER>
     const match = cmd.match(/(?:--ticker|-t)\s+([A-Za-z0-9\-_]+)/);
@@ -78,10 +93,7 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         selectedTicker={selectedTicker}
-        onSelectTicker={(t) => {
-          setSelectedTicker(t);
-          runAnalysis(t);
-        }}
+        onOpenSearch={() => setIsSearchOpen(true)}
         onRunAnalysis={() => runAnalysis(selectedTicker)}
         isRunning={isRunning}
       />
@@ -100,7 +112,17 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === 'arena' && <ArenaView data={firmData} isRunning={isRunning} />}
+        {activeTab === 'arena' && (
+          <ArenaView
+            data={firmData}
+            isRunning={isRunning}
+            onOpenSearch={() => setIsSearchOpen(true)}
+            onSelectQuickTicker={(t) => {
+              setSelectedTicker(t);
+              runAnalysis(t);
+            }}
+          />
+        )}
         {activeTab === 'terminal' && (
           <TerminalView
             data={firmData}
@@ -123,6 +145,17 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Global Stock Search & Custom Details Modal */}
+      <StockSearchModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        onSelectStock={(t, custom) => {
+          setSelectedTicker(t);
+          runAnalysis(t, custom);
+        }}
+        currentTicker={selectedTicker}
+      />
 
       {/* Institutional Footer */}
       <footer className="border-t border-slate-900 bg-slate-950/80 px-6 py-4 text-xs font-mono text-slate-500">
